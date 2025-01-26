@@ -14,23 +14,6 @@ print(f"Klient připojen: {client_address}")
 
 client_socket.send(b"HELLO\n")
 
-message = client_socket.recv(1024).decode().strip()
-
-if message.startswith(('help', 'h')):
-    help_message = (
-        "Available commands:\n"
-        "cit - napise zajimavy citat\n"
-        "dat - napise dnesni datum\n"
-        "exit - odpojeni\n"
-        "shutdown-server - vypne server\n"
-    )
-    client_socket.send(help_message.encode())
-
-elif message.startswith(('cit')):
-    client_socket.send(citat)
-
-
-
 
 
 
