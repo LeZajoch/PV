@@ -38,6 +38,10 @@ class Server:
                 while '\r\n' in buffer:
                     command, buffer = buffer.split('\r\n', 1)
                     command = command.strip()
+
+                    if not command:  # Pokud je příkaz prázdný (uživatel stiskl Enter bez textu)
+                        continue
+
                     print(f"Přijatý příkaz: {command}")
 
                     # Pokud je stav Ohmova zákona aktivní, zpracovává se stavovým modelem
@@ -45,8 +49,8 @@ class Server:
                         response = self.state.handle_input(self, client_socket, command)
                         if response:
                             client_socket.send((response + "\r\n").encode('utf-8'))
-                        # Stavový režim končí, pokud klient zadá příkaz "EXITCALCULATE"
-                        if command.upper() == "EXITCALCULATE":
+                        # Stavový režim končí, pokud klient zadá příkaz "ex"
+                        if command.lower() == "ex":
                             self.state = None
                             client_socket.send("Opouštíte režim výpočtu Ohmova zákona.\r\n".encode('utf-8'))
                         continue
@@ -61,6 +65,9 @@ class Server:
         self.clients.remove(client_socket)
         client_socket.close()
 
+        self.clients.remove(client_socket)
+        client_socket.close()
+
     def process_command(self, command, client_socket):
         commands = {
             "help": self.show_help,
@@ -70,7 +77,7 @@ class Server:
             "bro": self.broadcast_message,
             "ss": self.request_shutdown,
             "ex": self.disconnect_client,
-            "calculateohm": self.start_ohm_calculation,  # Nový příkaz pro Ohmův zákon
+            "calculateohm": self.start_ohm_calculation,
         }
         func = commands.get(command.split()[0].lower(), self.unknown_command)
         return func(client_socket, command)
@@ -116,7 +123,7 @@ class Server:
                 try:
                     client.send(f"BROADCAST: {message}\r\n".encode('utf-8'))
                 except:
-                    pass  # Ignorujeme chyby při posílání
+                    pass
 
         return "Broadcast zpráva byla odeslána."
 
