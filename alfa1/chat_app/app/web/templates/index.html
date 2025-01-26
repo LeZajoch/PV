@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chat App</title>
+<link rel="stylesheet" href="{{ url_for('web.static', filename='css/style.css') }}">
+</head>
+<body>
+<h1>Web Chat</h1>
+<div id="chat">
+    <div id="messages"></div>
+    <input id="username" placeholder="Username" />
+    <input id="message_input" placeholder="Type your message" />
+    <button id="send_button">Send</button>
+</div>
+<script src="{{ url_for('web.static', filename='js/chat.js') }}"></script>
+</body>
+</html>

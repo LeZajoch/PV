@@ -1,0 +1,13 @@
+server:
+  host: "127.0.0.1"
+  port: 5000
+  debug: true
+
+logging:
+  level: "DEBUG"
+  file: "chat.log"
+
+chat:
+  max_message_length: 200
+  allowed_characters: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?@#"
+  max_connections: 100

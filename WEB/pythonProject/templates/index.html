@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blogový systém</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<h1>Blogové příspěvky</h1>
+
+<div id="posts"></div>
+
+<h2>Přidat nový příspěvek</h2>
+<form id="create-post-form">
+    <input type="text" id="author" placeholder="Autor" required>
+    <textarea id="content" placeholder="Obsah příspěvku" required></textarea>
+    <button type="submit">Vytvořit</button>
+</form>
+
+<script>
+    async function loadPosts() {
+        const response = await fetch('/api/blog');
+        const posts = await response.json();
+            console.log(posts);
+        const postsDiv = document.getElementById('posts');
+        postsDiv.innerHTML = '';
+        posts.forEach(post => {
+            const postDiv = document.createElement('div');
+            postDiv.classList.add('post');
+            postDiv.innerHTML = `<h3>${post.author}</h3><p>${post.content}</p><small>${new Date(post.created_at).toLocaleString()}</small>`;
+            postsDiv.appendChild(postDiv);
+        });
+    }
+
+    document.getElementById('create-post-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const author = document.getElementById('author').value;
+        const content = document.getElementById('content').value;
+
+        await fetch('/api/blog', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ author, content })
+        });
+
+        document.getElementById('author').value = '';
+        document.getElementById('content').value = '';
+        loadPosts();
+    });
+
+    loadPosts();
+</script>
+
+</body>
+</html>
