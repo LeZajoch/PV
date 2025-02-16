@@ -1,9 +1,46 @@
+import os
+import json
+from datetime import datetime
 import socket
 import random
-from datetime import datetime
 import threading
+from datetime import datetime
 import state
 
+class Logger:
+    def __init__(self, log_dir="logs"):
+        self.log_dir = log_dir
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+    def log(self, level, client_ip, command, error_message=None):
+        now = datetime.now()
+        timestamp = now.strftime("%Y-%m-%dT%H:%M")
+        date_str = now.strftime("%d,%m,%Y")
+        log_file = os.path.join(self.log_dir, f"{date_str}.json")
+        log_entry = {
+            "timestamp": timestamp,
+            "level": level,
+            "client_ip": client_ip,
+            "command": command,
+        }
+        if error_message:
+            log_entry["error"] = error_message
+
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    logs = json.load(f)
+                    if not isinstance(logs, list):
+                        logs = []
+            except Exception:
+                logs = []
+        else:
+            logs = []
+
+        logs.append(log_entry)
+        with open(log_file, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
 
 class Server:
     def __init__(self, host, port):
@@ -14,6 +51,7 @@ class Server:
         self.clients = []
         self.shutdown_votes = {}
         self.state = state.StateKnowNothing()
+        self.logger = Logger()
 
     def start(self):
         self.server_socket.bind((self.host, self.port))
@@ -23,9 +61,10 @@ class Server:
             client_socket, client_address = self.server_socket.accept()
             self.clients.append(client_socket)
             print(f"Připojen klient: {client_address}")
-            threading.Thread(target=self.handle_client, args=(client_socket,)).start()
+            self.logger.log("INFO", client_address[0], "Client Connected")
+            threading.Thread(target=self.handle_client, args=(client_socket, client_address)).start()
 
-    def handle_client(self, client_socket):
+    def handle_client(self, client_socket, client_address):
         client_socket.send("Vítejte na serveru! Napište 'help' pro dostupné příkazy.\r\n".encode('utf-8'))
         buffer = ""
         while True:
@@ -33,34 +72,23 @@ class Server:
                 data = client_socket.recv(1024).decode('utf-8')
                 if not data:
                     break
-
-
                 buffer += data
                 while '\r\n' in buffer:
                     command, buffer = buffer.split('\r\n', 1)
                     command = command.strip()
                     print(f"Přijatý příkaz: {command}")
-                    response = self.process_command(command, client_socket)
+                    self.logger.log("INFO", client_address[0], command)
+                    response = self.process_command(command, client_socket, client_address)
                     if response:
                         client_socket.send((response + "\r\n").encode('utf-8'))
-            except ConnectionResetError:
-
-                if command == "CALCULATEOHM":
-                    self.state = state.StateKnowNothing()
-                    client_socket.send("OK\n".encode('utf-8'))
-                    continue
-
-                response = self.state.handle_input(self, client_socket, command)
-                client_socket.send((response + "\n").encode('utf-8'))
-            except ConnectionResetError:
+            except Exception as e:
+                self.logger.log("ERROR", client_address[0], "Unknown", str(e))
                 break
-
-
 
         self.clients.remove(client_socket)
         client_socket.close()
 
-    def process_command(self, command, client_socket):
+    def process_command(self, command, client_socket, client_address):
         commands = {
             "help": self.show_help,
             "cit": self.send_quote,
@@ -74,16 +102,7 @@ class Server:
         return func(client_socket, command)
 
     def show_help(self, client_socket, command):
-        help_message = (
-            "Dostupné příkazy:\r\n"
-            "cit - vypíše citát\r\n"
-            "dat - vrátí aktuální datum\r\n"
-            "cli - zobrazí počet aktuálně připojených klientů\r\n"
-            "bro [zpráva] - pošle zprávu všem připojeným klientům\r\n"
-            "ss - zahájí hlasování o vypnutí serveru\r\n"
-            "ex - odpojí vás ze serveru\r\n"
-        )
-        return help_message
+        return "Dostupné příkazy:\r\ncit - vypíše citát\r\ndat - vrátí aktuální datum\r\ncli - zobrazí počet aktuálně připojených klientů\r\nbro [zpráva] - pošle zprávu všem připojeným klientům\r\nss - zahájí hlasování o vypnutí serveru\r\nex - odpojí vás ze serveru\r\n"
 
     def send_quote(self, client_socket, command):
         quotes = [
@@ -105,48 +124,27 @@ class Server:
             return "Zpráva je prázdná. Použijte: broadcast [zpráva]"
 
         for client in self.clients:
-            if client != client_socket:  # Neposílat zprávu odesilateli
+            if client != client_socket:
                 try:
                     client.send(f"BROADCAST: {message}\r\n".encode('utf-8'))
                 except:
-                    pass  # Ignorujeme chyby pri posilani
-
+                    pass
         return "Broadcast zpráva byla odeslána."
 
     def request_shutdown(self, client_socket, command):
-        if client_socket in self.shutdown_votes:
-            return "Již jste hlasoval pro vypnutí serveru."
-
-        self.shutdown_votes[client_socket] = None
-        for client in self.clients:
-            if client != client_socket:
-                try:
-                    client.send("Příkaz 'shutdown-server' byl odeslán. Souhlasíte s vypnutím serveru? (yes/no)\r\n".encode('utf-8'))
-                except:
-                    pass
-
+        self.logger.log("INFO", "Server", "Shutdown vote initiated")
         return "Hlasování o vypnutí serveru zahájeno. Čeká se na odpovědi všech klientů."
 
-    def collect_votes(self, client_socket, vote):
-        self.shutdown_votes[client_socket] = vote
-        if all(v is not None for v in self.shutdown_votes.values()):  # vsici hlasovali
-            if all(vote == "yes" for vote in self.shutdown_votes.values()):  # vsici souhlasí
-                self.broadcast_message(client_socket, "Server se vypíná na základě hlasování.")
-                self.running = False
-                self.server_socket.close()
-            else:
-                self.broadcast_message(client_socket, "Hlasování o vypnutí serveru neprošlo.")
-            self.shutdown_votes.clear()
-
     def disconnect_client(self, client_socket, command):
+        self.logger.log("INFO", "Server", "Client Disconnected")
         client_socket.send("Byli jste odpojeni.\r\n".encode('utf-8'))
         self.clients.remove(client_socket)
         client_socket.close()
         return None
 
     def unknown_command(self, client_socket, command):
+        self.logger.log("WARNING", "Server", command, "Unknown Command")
         return "Neznámý příkaz. Napište 'help' pro seznam dostupných příkazů."
-
 
 if __name__ == "__main__":
     host = "127.0.0.1"
