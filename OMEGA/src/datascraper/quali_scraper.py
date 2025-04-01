@@ -3,7 +3,7 @@ from base_scraper import BaseScraper
 class QualiScraper(BaseScraper):
     def __init__(self, year: str):
         super().__init__(year)
-        self.output_prefix = "quali_laps"
+        self.output_prefix = "quali_laps"  # Filename prefix for Qualifying data
 
     def fetch_sessions(self):
         """

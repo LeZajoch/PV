@@ -3,7 +3,7 @@ from base_scraper import BaseScraper
 class RaceScraper(BaseScraper):
     def __init__(self, year: str):
         super().__init__(year)
-        self.output_prefix = "race_laps"
+        self.output_prefix = "race_laps"  # Filename prefix for Race data
 
     def fetch_sessions(self):
         """
