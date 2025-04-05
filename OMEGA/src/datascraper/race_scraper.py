@@ -14,7 +14,7 @@ class RaceScraper(BaseScraper):
         return data if isinstance(data, list) else []
 
 def main():
-    year = input("Enter a year for Race sessions (e.g. 2023): ").strip()
+    year = input("Enter a year for Race sessions (2023-2025): ").strip()
     if not year.isdigit():
         print("Invalid year entered!")
         return

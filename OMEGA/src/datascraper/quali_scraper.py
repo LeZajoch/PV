@@ -14,7 +14,7 @@ class QualiScraper(BaseScraper):
         return data if isinstance(data, list) else []
 
 def main():
-    year = input("Enter a year for Qualifying sessions (e.g. 2023): ").strip()
+    year = input("Enter a year for Qualifying sessions (2023-2025): ").strip()
     if not year.isdigit():
         print("Invalid year entered!")
         return
