@@ -1,0 +1,174 @@
+:root {
+  --f1-red: #e10600;
+  --f1-black: #15151e;
+  --f1-white: #ffffff;
+  --f1-dark-gray: #1e1e24;
+  --f1-light-gray: #aaaaaa;
+  --f1-input-bg: #2a2a30;
+}
+
+body {
+  background-color: var(--f1-black);
+  color: var(--f1-white);
+  font-family: 'Roboto', sans-serif;
+}
+
+.navbar {
+  background-color: var(--f1-red) !important;
+}
+
+.card {
+  background-color: var(--f1-dark-gray);
+  border: 1px solid #333;
+  margin-bottom: 30px;
+  color: var(--f1-white);
+}
+
+.card-header {
+  background-color: #2a2a33 !important;
+  color: var(--f1-white) !important;
+  font-weight: bold;
+}
+
+.btn-primary {
+  background-color: var(--f1-red);
+  border-color: var(--f1-red);
+}
+
+.btn-primary:hover {
+  background-color: #b30500;
+  border-color: #b30500;
+}
+
+.result-card {
+  display: block;
+}
+
+.form-label {
+  color: var(--f1-white);
+  font-weight: 500;
+}
+
+.form-control, .form-select {
+  background-color: var(--f1-input-bg);
+  color: var(--f1-white);
+  border: 1px solid #444;
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: var(--f1-input-bg);
+  color: var(--f1-white);
+  border-color: var(--f1-red);
+  box-shadow: 0 0 0 0.25rem rgba(225, 6, 0, 0.25);
+}
+
+.form-control::placeholder {
+  color: #888;
+}
+
+.loader {
+  display: none;
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--f1-white);
+  border-top: 5px solid var(--f1-red);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+footer {
+  margin-top: 50px;
+  padding: 20px 0;
+  background-color: var(--f1-black);
+  border-top: 1px solid #333;
+  color: var(--f1-light-gray);
+}
+
+.standings-table {
+  width: 100%;
+  color: var(--f1-white);
+}
+
+.standings-table th {
+  background-color: #2a2a33;
+  color: var(--f1-white);
+  border-color: #444;
+}
+
+.standings-table td {
+  color: var(--f1-white);
+  border-color: #444;
+}
+
+.position-1 {
+  background-color: rgba(225, 6, 0, 0.2);
+}
+
+.position-2 {
+  background-color: rgba(225, 6, 0, 0.1);
+}
+
+.position-3 {
+  background-color: rgba(225, 6, 0, 0.05);
+}
+
+.team-logo {
+  width: 30px;
+  height: 30px;
+  margin-right: 8px;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+.race-stats {
+  margin-bottom: 20px;
+  background-color: rgba(40, 40, 45, 0.8);
+  padding: 15px;
+  border-radius: 5px;
+  color: var(--f1-white);
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--f1-white);
+}
+
+.badge.bg-advantage {
+  background-color: #198754 !important;
+}
+
+.badge.bg-disadvantage {
+  background-color: #dc3545 !important;
+}
+
+.page-title {
+  font-size: 2.2rem;
+  color: var(--f1-white);
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: var(--f1-light-gray);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.about-section p {
+  color: var(--f1-light-gray);
+  line-height: 1.6;
+}
+
+.about-section h2 {
+  color: var(--f1-white);
+  border-bottom: 2px solid var(--f1-red);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}

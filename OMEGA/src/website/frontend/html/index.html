@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F1 Team Car Predictor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../style/style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="#">F1 Team Car Predictor</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="#">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#about">About</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <div class="container mt-4">
+    <div class="card">
+      <div class="card-body">
+        <h1 class="page-title">Formula 1 Car Performance Predictor</h1>
+        <p class="page-subtitle">Enter the race conditions below to predict team car performance</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container mt-4">
+    <div class="row">
+      <!-- Input Form -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h2>Race Conditions</h2>
+          </div>
+          <div class="card-body">
+            <form id="racePredictionForm">
+              <div class="mb-3">
+                <label for="st_speed" class="form-label">Straight-line Speed (km/h)</label>
+                <input type="number" class="form-control" id="st_speed" value="330" required min="250" max="370">
+              </div>
+
+              <div class="mb-3">
+                <label for="compound" class="form-label">Tire Compound</label>
+                <select class="form-select" id="compound" required>
+                  <option value="Soft">Soft</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Wet">Wet</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="air_temp" class="form-label">Air Temperature (°C)</label>
+                <input type="number" class="form-control" id="air_temp" value="25" required min="-10" max="60">
+              </div>
+
+              <div class="mb-3">
+                <label for="rainfall" class="form-label">Rainfall (mm)</label>
+                <input type="number" class="form-control" id="rainfall" value="0" required min="0" max="100" step="0.1">
+              </div>
+
+              <div class="mb-3">
+                <label for="wind_direction" class="form-label">Wind Direction (degrees)</label>
+                <input type="number" class="form-control" id="wind_direction" value="180" required min="0" max="359">
+              </div>
+
+              <div class="mb-3">
+                <label for="wind_speed" class="form-label">Wind Speed (km/h)</label>
+                <input type="number" class="form-control" id="wind_speed" value="5" required min="0" max="100">
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100">Calculate Prediction</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div class="col-md-6">
+        <div class="card" id="resultCard">
+          <div class="card-header">
+            <h2>Predicted Car Performance</h2>
+          </div>
+          <div class="card-body">
+            <div id="resultContent">
+              <!-- Car tier list header -->
+              <div class="race-stats">
+                <h4>Car tier list - Race Conditions</h4>
+                <div class="row">
+                  <div class="col-6">
+                    <p><strong>Track Temp:</strong> 35.0°C</p>
+                    <p><strong>Air Temp:</strong> 25°C</p>
+                    <p><strong>Humidity:</strong> 70.7%</p>
+                  </div>
+                  <div class="col-6">
+                    <p><strong>Wind:</strong> 5 km/h (180°)</p>
+                    <p><strong>Rainfall:</strong> 0 mm</p>
+                    <p><strong>Compound:</strong> Soft</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Teams performance table -->
+              <table class="table standings-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Team</th>
+                    <th>Car Performance</th>
+                    <th>Advantage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="position-1">
+                    <td>1</td>
+                    <td>
+                      <img src="https://www.formula1.com/content/dam/fom-website/teams/2023/ferrari-logo.png.transform/2col/image.png" class="team-logo" alt="Ferrari">
+                      Ferrari
+                    </td>
+                    <td>98.5%</td>
+                    <td>BASELINE</td>
+                  </tr>
+                  <tr class="position-2">
+                    <td>2</td>
+                    <td>
+                      <img src="https://www.formula1.com/content/dam/fom-website/teams/2023/ferrari-logo.png.transform/2col/image.png" class="team-logo" alt="Ferrari">
+                      Ferrari
+                    </td>
+                    <td>98.2%</td>
+                    <td>-0.3%</td>
+                  </tr>
+                  <!-- More team entries would go here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="loader" id="loader"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Section -->
+  <div class="container mt-5" id="about">
+    <div class="card about-section">
+      <div class="card-header">
+        <h2>About F1 Team Car Predictor</h2>
+      </div>
+      <div class="card-body">
+        <p>F1 Team Car Predictor uses advanced algorithms to analyze, predict and compare performance of cars</p>
+        <p>Our model is trained on historical race data to provide accurate predictions for team car performance without any driver input.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center">
+    <div class="container">
+      <p>&copy; 2023 F1 Team Car Predictor | All rights reserved</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

@@ -10,18 +10,15 @@ from datetime import datetime
 DELAY = 1
 
 class BaseScraper:
-    def __init__(self, year: str):
+    def __init__(self, year: str, last_year_compound="SOFT"):
         self.year = year
-        # This output_prefix will be used to build the output file name.
-        self.output_prefix = "output"
-        # This will hold reference driver data (from a session with complete driver info).
-        self.reference_drivers = None
+        self.output_prefix = "output"  # used in output filename
+        self.last_year_compound = last_year_compound  # fallback compound if not raining
+        self.reference_drivers = None  # reference driver data from a complete session
 
     @staticmethod
     def safe_field(value, default):
-        """
-        Return value if it is not None or empty; otherwise, return the default.
-        """
+        """Return value if it is not None or empty; otherwise return default."""
         if value is None:
             return default
         if isinstance(value, str) and value.strip() == "":
@@ -31,7 +28,7 @@ class BaseScraper:
     def fetch_json(self, url: str):
         """
         Fetch JSON data from the given URL using urlopen.
-        Retries up to three times for HTTP 429 or 500 errors.
+        Retries up to 3 times for HTTP 429 or 500 errors.
         """
         max_retries = 3
         for attempt in range(max_retries):
@@ -58,25 +55,17 @@ class BaseScraper:
         return None
 
     def fetch_sessions(self):
-        """
-        Abstract method. Subclasses must override this method.
-        Returns a list of session dictionaries.
-        """
+        """Abstract method – subclasses must override this to return a list of session dicts."""
         raise NotImplementedError("Subclasses must implement the fetch_sessions method!")
 
     def fetch_drivers(self, session_key: str):
-        """
-        Fetch driver information for the given session.
-        """
+        """Fetch driver information for the given session."""
         url = f"https://api.openf1.org/v1/drivers?session_key={session_key}"
         data = self.fetch_json(url)
         return data if isinstance(data, list) else []
 
     def fetch_laps(self, session_key: str):
-        """
-        Fetch lap data for the given session.
-        Only laps with a duration under 120 seconds are considered.
-        """
+        """Fetch lap data for the given session (only laps with duration < 120 sec)."""
         url = (
             f"https://api.openf1.org/v1/laps?session_key={session_key}"
             "&is_pit_out_lap=false&lap_duration%3C=120"
@@ -85,27 +74,22 @@ class BaseScraper:
         return data if isinstance(data, list) else []
 
     def fetch_tires(self, session_key: str):
-        """
-        Fetch tire stint data for the given session.
-        """
+        """Fetch tire stint data for the given session."""
         url = f"https://api.openf1.org/v1/stints?session_key={session_key}"
         data = self.fetch_json(url)
         return data if isinstance(data, list) else []
 
     def fetch_weather(self, session_key: str):
-        """
-        Fetch weather data for the given session.
-        """
+        """Fetch weather data for the given session."""
         url = f"https://api.openf1.org/v1/weather?session_key={session_key}"
         data = self.fetch_json(url)
         return data if isinstance(data, list) else []
 
     def get_closest_weather(self, lap_datetime: datetime, weather_list: list):
         """
-        Given a lap datetime and a list of weather records (each with a "parsed_date"),
+        Given a lap datetime and a list of weather records (each with "parsed_date"),
         return a copy of the weather record closest in time to lap_datetime.
-        In case of a tie, choose the record that is earlier.
-        Remove the temporary "parsed_date" key before returning.
+        Choose the earlier one in case of tie and remove the temporary "parsed_date" key.
         """
         best_record = None
         best_diff = float("inf")
@@ -128,9 +112,9 @@ class BaseScraper:
 
     def find_reference_driver_data(self):
         """
-        Loop over sessions until a session with complete driver info is found.
+        Loop over sessions until one with complete driver info is found.
         Complete means every driver record has non-empty driver_number, full_name, and team_name.
-        Returns a dictionary mapping an identifier (e.g., "num:<driver_number>") to complete driver info.
+        Returns a dictionary mapping an identifier (e.g., "num:<driver_number>") to driver info.
         """
         sessions = self.fetch_sessions()
         for session in sessions:
@@ -166,12 +150,13 @@ class BaseScraper:
 
     def is_session_complete(self, session_result: dict) -> bool:
         """
-        Consider a session complete if its result exists and each driver's record in every team
-        has a non-empty 'fastest_lap' field.
+        For our purposes, consider a session complete if the result exists and every driver record
+        (within each team) has a non-empty 'fastest_lap' field.
         """
-        if not session_result:
+        if not session_result or "teams" not in session_result:
             return False
-        for team, drivers in session_result.items():
+        teams = session_result["teams"]
+        for team, drivers in teams.items():
             for d in drivers:
                 if not d.get("fastest_lap"):
                     return False
@@ -182,18 +167,23 @@ class BaseScraper:
         Process a single session:
           - Retrieve driver data and merge/fill missing fields (driver_number, full_name, team_name)
             using preceding records.
-          - For any driver missing team_name, use the reference driver data (if available) to fill in.
+          - For drivers missing a team_name, if available, fill it in using the reference driver data.
           - Build a drivers_info mapping and group drivers by team.
-          - Retrieve lap data (< 120 sec) and determine the fastest lap per driver.
+          - Retrieve lap data (only laps with duration < 120 sec) and determine the fastest lap per driver.
           - Retrieve tire stint data and assign tire information to laps.
-          - Retrieve weather data and attach, for each lap, the record whose time is closest to 'date_start'.
-          - Adjust tire compound: if tire_data compound is "UNKNOWN", set to "INTERMEDIATE" if weather indicates rain; otherwise "SOFT".
-        Returns a tuple (session_key, session_result), where session_result is grouped by team.
-        If critical data is missing, returns an empty dictionary.
+          - For any lap missing tire data, check the weather—if rain then use "INTERMEDIATE",
+            else use last year's tire compound—and add a note.
+          - Retrieve weather data and, for each lap, attach the weather record closest in time (based on 'date_start').
+          - If tire_data exists but the compound is "UNKNOWN", update it similarly.
+          - Finally, attach the session’s circuit_short_name (if available) to the result.
+        Returns a tuple (session_key, session_result) where session_result is a dict:
+            { "circuit_short_name": <value>, "teams": { team_name: [driver_records,…] } }.
+        Returns an empty dict if critical data is missing.
         """
         session_key = session.get("session_key")
-        circuit_short_name = session.get("circuit_short_name")
-        print(f"\nProcessing session: {session_key} - {circuit_short_name}")
+        # Extract circuit_short_name from the session object (default "UNKNOWN")
+        circuit_short_name = session.get("circuit_short_name", "UNKNOWN")
+        print(f"\nProcessing session: {session_key} (Circuit: {circuit_short_name})")
 
         # --- Merge/Fill Driver Data ---
         drivers_data = self.fetch_drivers(session_key)
@@ -242,7 +232,7 @@ class BaseScraper:
                     if key and key in self.reference_drivers:
                         driver["team_name"] = self.reference_drivers[key].get("team_name")
 
-        # --- Build Final Drivers Info and Group by Team ---
+        # --- Build Drivers Info and Group by Team ---
         drivers_info = {}
         teams = {}
         for driver in drivers_data:
@@ -315,6 +305,25 @@ class BaseScraper:
                             if lnum == specific_lap:
                                 lap["tire_data"] = stint
 
+        # --- Fill Missing Tire Data with Fallback ---
+        missing_tire_flag = False
+        for driver, laps in driver_all_laps.items():
+            for lap in laps:
+                if "tire_data" not in lap:
+                    weather = lap.get("weather_data") or {}
+                    description = (weather.get("weather") or weather.get("condition") or "").lower()
+                    if "rain" in description:
+                        compound = "INTERMEDIATE"
+                    else:
+                        compound = self.last_year_compound
+                    lap["tire_data"] = {
+                        "compound": compound,
+                        "note": "Fallback: filled using last year's tire data due to missing info."
+                    }
+                    missing_tire_flag = True
+        if missing_tire_flag:
+            print("WARNING: Some laps were missing tire data. Fallback tire data have been applied.")
+
         # --- Process Weather Data ---
         weather_data = self.fetch_weather(session_key)
         if weather_data:
@@ -323,7 +332,7 @@ class BaseScraper:
                     w["parsed_date"] = datetime.fromisoformat(w.get("date"))
                 except Exception:
                     w["parsed_date"] = None
-            for driver_num, laps in driver_all_laps.items():
+            for driver, laps in driver_all_laps.items():
                 for lap in laps:
                     lap_start_str = lap.get("date_start")
                     if not lap_start_str:
@@ -335,8 +344,8 @@ class BaseScraper:
                     closest_weather = self.get_closest_weather(lap_dt, weather_data)
                     lap["weather_data"] = closest_weather
 
-        # --- Update Tire Compound Based on Weather ---
-        for driver_num, laps in driver_all_laps.items():
+        # --- Update Existing Tire Data with Compound "UNKNOWN" ---
+        for driver, laps in driver_all_laps.items():
             for lap in laps:
                 tire = lap.get("tire_data")
                 if tire and tire.get("compound") == "UNKNOWN":
@@ -345,10 +354,10 @@ class BaseScraper:
                     if "rain" in description:
                         tire["compound"] = "INTERMEDIATE"
                     else:
-                        tire["compound"] = "SOFT"
+                        tire["compound"] = self.last_year_compound
 
         # --- Assemble Final Results Grouped by Team ---
-        session_result = {}
+        teams_result = {}
         for team, driver_nums in teams.items():
             team_drivers = []
             for num in driver_nums:
@@ -359,14 +368,16 @@ class BaseScraper:
                     "laps": driver_all_laps.get(num, [])
                 }
                 team_drivers.append(driver_record)
-            session_result[team] = team_drivers
+            teams_result[team] = team_drivers
 
-        return session_key, session_result
+        final_session_result = {
+            "circuit_short_name": circuit_short_name,
+            "teams": teams_result
+        }
+        return session_key, final_session_result
 
     def save_results(self, results: dict):
-        """
-        Save the aggregated results into the folder data/scraped_data.
-        """
+        """Save the aggregated results into the folder data/scraped_data."""
         output_dir = os.path.join("data", "scraped_data")
         os.makedirs(output_dir, exist_ok=True)
         output_filename = os.path.join(output_dir, f"{self.output_prefix}_{self.year}.json")
@@ -380,14 +391,13 @@ class BaseScraper:
     def run(self):
         """
         Main method to run the scraper:
-          - Before scraping, load existing results from data/scraped_data (if any).
-          - Fetch all sessions for the year and build a dictionary keyed by session_key.
-          - Compare this list to the keys in the loaded results; only scrape sessions missing or incomplete.
-          - Process each missing session one by one (saving after each) and gather a list of incomplete sessions.
-          - Retry incomplete sessions up to 10 attempts. If after 10 attempts some remain incomplete, prompt the user to try another 10 attempts.
-          - Save final aggregated results into data/scraped_data.
+          - Load existing results (if any) from data/scraped_data.
+          - Fetch all sessions for the year and build a map of session_key to session data.
+          - Compare with saved results so that only missing/incomplete sessions are scraped.
+          - Process each missing session (saving after each) and collect incomplete sessions.
+          - Retry incomplete sessions up to 10 attempts; if still incomplete, prompt the user for additional attempts.
+          - Save the final aggregated results into data/scraped_data.
         """
-        # Prepare output directory and file name
         output_dir = os.path.join("data", "scraped_data")
         os.makedirs(output_dir, exist_ok=True)
         output_filename = os.path.join(output_dir, f"{self.output_prefix}_{self.year}.json")
@@ -403,34 +413,33 @@ class BaseScraper:
                 print("Could not load existing file; starting fresh:", e)
                 final_results = {}
 
-        # Fetch complete session list for the year.
         sessions = self.fetch_sessions()
         if not sessions:
             print("No sessions found for the provided year.")
             return
 
-        # Build a dictionary of sessions keyed by session_key (as string).
-        sessions_dict = {}
+        # Build a map of sessions keyed by session_key.
+        sessions_map = {}
         for session in sessions:
             key = session.get("session_key")
             if key is not None:
-                sessions_dict[str(key)] = session
+                sessions_map[str(key)] = session
 
-        # Determine which sessions need to be scraped (missing or incomplete).
+        # Determine sessions to be scraped (missing or incomplete).
         missing_session_keys = []
-        for key in sessions_dict:
+        for key in sessions_map:
             if key not in final_results:
                 missing_session_keys.append(key)
             else:
                 if not self.is_session_complete(final_results[key]):
                     missing_session_keys.append(key)
 
-        print("Total sessions from API:", len(sessions_dict))
-        print("Sessions to be scraped/re-scraped:", missing_session_keys)
+        print("Total sessions from API:", len(sessions_map))
+        print("Session keys to (re)scrape:", missing_session_keys)
 
         incomplete_sessions = []
         for key in missing_session_keys:
-            session = sessions_dict[key]
+            session = sessions_map[key]
             s_key, result = self.process_session(session)
             if self.is_session_complete(result):
                 final_results[s_key] = result
@@ -442,9 +451,8 @@ class BaseScraper:
             self.save_results(final_results)
             time.sleep(DELAY)
 
-        max_attempts = 10
+        max_attempts = 1
         attempt_counter = 0
-
         while incomplete_sessions and attempt_counter < max_attempts:
             print(f"\nRetry attempt {attempt_counter + 1} for {len(incomplete_sessions)} incomplete session(s).")
             still_incomplete = []
