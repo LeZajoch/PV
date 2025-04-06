@@ -119,6 +119,5 @@ function displayTeamPerformance(data) {
     </table>
   `;
 
-  // Only show the conditions and team table (removed performance metrics cards)
   resultContent.innerHTML = conditionsHTML + teamsHTML;
 }

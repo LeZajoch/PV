@@ -1,0 +1,37 @@
+[
+    {
+        "timestamp": "2025-02-16T22:26:51.029509",
+        "generated_numbers": [
+            786,
+            979,
+            877,
+            235,
+            292,
+            867,
+            640,
+            678,
+            952,
+            86
+        ],
+        "algorithms": {
+            "boat_brute_force": {
+                "execution_time_in_seconds": 1.1493754386901855,
+                "time_complexity": "O(n!)",
+                "memory_complexity": "O(n!)",
+                "output_items": 80640
+            },
+            "boat_monte_carlo": {
+                "execution_time_in_seconds": 0.6583797931671143,
+                "time_complexity": "O(n!) (due to full permutation generation)",
+                "memory_complexity": "O(n!)",
+                "output_items": 2
+            },
+            "boat_heuristic": {
+                "execution_time_in_seconds": 3.5762786865234375e-05,
+                "time_complexity": "O(n log n)",
+                "memory_complexity": "O(n)",
+                "output_items": 2
+            }
+        }
+    }
+]

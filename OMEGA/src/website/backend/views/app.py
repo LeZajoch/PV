@@ -1,17 +1,15 @@
-# website/backend/views/app.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sys
 import os
 
-# Add the parent directory to sys.path to import the controller
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from ..controllers.predict_controller import PredictController
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# Initialize controller
 predict_controller = PredictController()
 
 
