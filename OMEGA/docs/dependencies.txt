@@ -1,0 +1,8 @@
+pip install flask flask-cors numpy scikit-learn
+
+
+
+
+python -m venv venv
+venv\Scripts\activate
+pip install flask numpy scikit-learn
